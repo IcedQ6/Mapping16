@@ -4,9 +4,7 @@
 /*
 Scaffolding: Mapping - Group 16
 
-Program by: Luke Whipple
-My partnter, Fabiana Rodriguez Velez, did not reach out to me before the deadline,
-so all of this is my own work entirely.
+Program by: Luke Whipple and Fabiana Rodriguez Velez
 
 GOAL:
 Bop-It like game where the player must flick the Circuit Playground in different directions,
