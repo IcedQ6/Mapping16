@@ -37,13 +37,96 @@ Your score is based on the number of LEDs that light up, ranging as so:
 
 To play again, just press the left button again. Scores are not tracked.
 */
+int timeToReact = 4000;
+char currentTask = 'U';
+int const delayBetweenTasks = 500;
+bool gameInProgress = false;
 
 void setup() {
-  // put your setup code here, to run once:
+  // put your setup code here, to run once: 
 
+  CircuitPlayground.begin();
+  Serial.begin(9600);
+  delay(1000);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  CircuitPlayground.clearPixels();
+  lightDirection(determineNextTask());
+  delay(200);
 
 }
+
+// Plays a short tone and then delays the program so the user has time
+// to reposition the device.
+void success () {
+  CircuitPlayground.playTone(2000, 200, false);
+  delay(delayBetweenTasks);
+}
+
+// returns true if the right motion input has been made, false if any other
+// are detected.
+bool checkMotionInput(char direction) {
+  
+}
+
+// Determines the next challenge for the player.
+// Returns a character corresponding to the 6 tasks
+char determineNextTask() {
+  long randomNum = random(4);
+
+  // Converts int to corresponding character
+  // 0-3 are up, left, down, and right
+  // 4 and 5 are yell and cover respectively.
+  // Getting 4 or 5 at all is half as likely as the directions so that they feel special.
+  switch (randomNum) {
+    case 0: return 'U';
+    case 1: return 'L';
+    case 2: return 'D';
+    case 3: return 'R';
+    case 4: return 'Y'; //yell
+    case 5: return 'C'; //cover
+  }
+}
+
+// Creates lights that point to one of four directions.
+// Accepts a char to determine the direction.
+void lightDirection(char direction) { 
+
+  switch (direction) {
+    case 'U': // UP
+      CircuitPlayground.setPixelColor(0, 0, 0, 255);
+      CircuitPlayground.setPixelColor(9, 0, 0, 255);
+      break;
+
+    case 'L': // LEFT
+      for (int i = 1; i < 4; i++) {
+        CircuitPlayground.setPixelColor(i, 0, 0, 255);
+      }
+      break;
+
+    case 'D': // DOWN
+      for (int i = 4; i < 6; i++) {
+        CircuitPlayground.setPixelColor(i, 0, 0, 255);
+      }
+      break;
+
+    case 'R': // RIGHT
+      for (int i = 6; i < 9; i++) {
+        CircuitPlayground.setPixelColor(i, 0, 0, 255);
+      }
+      break;
+
+    default: // Flashes an error animation.
+      for (int j = 0; j < 8; j++) {
+        for (int i = 0; i < 10; i++) {
+          CircuitPlayground.setPixelColor(i, 255, 0, 0);
+        }
+        delay(100);
+        CircuitPlayground.clearPixels();
+        delay(100);
+      }
+      
+  }
+} 
