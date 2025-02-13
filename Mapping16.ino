@@ -41,34 +41,111 @@ int timeToReact = 4000;
 char currentTask = 'U';
 int const delayBetweenTasks = 500;
 bool gameInProgress = false;
+unsigned long timer = 0;
 
 void setup() {
   // put your setup code here, to run once: 
-
   CircuitPlayground.begin();
+
+  CircuitPlayground.setAccelRange(LIS3DH_RANGE_8_G); // Sets range to +-4G (4x force of gravity)
   Serial.begin(9600);
   delay(1000);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  CircuitPlayground.clearPixels();
-  lightDirection(determineNextTask());
-  delay(200);
+  // Only works if the switch is on
+  if (CircuitPlayground.leftButton() && gameInProgress == false) {
+    currentTask = determineNextTask();
+    lightDirection(currentTask);
+  }
+  
+  if (gameInProgress == true) {
+    
+    bool detectedMotion = checkForMotion();
+
+    if (detectedMotion == true) {
+      bool correctInput = checkMotionInput(currentTask);
+      
+      if (correctInput == true) {
+        success();
+        currentTask = determineNextTask();
+        lightDirection(currentTask);
+        timer = millis();
+      } else {
+        failure();
+        gameInProgress == false;
+      }
+    }
+
+    if (millis() > timer + timeToReact) {
+      failure();
+      gameInProgress == false;
+    }
+
+  }
 
 }
 
 // Plays a short tone and then delays the program so the user has time
 // to reposition the device.
 void success () {
-  CircuitPlayground.playTone(2000, 200, false);
+  for (int i = 0; i < 10; i++) {CircuitPlayground.setPixelColor(i, 0, 255, 0);}
+
+  CircuitPlayground.playTone(5000, 200, false);
   delay(delayBetweenTasks);
+  CircuitPlayground.clearPixels();
 }
 
+// Plays a short tone and then delays the program so the user has time
+// to reposition the device.
+void failure () {
+  for (int i = 0; i < 10; i++) {CircuitPlayground.setPixelColor(i, 255, 0, 0);}
+
+  CircuitPlayground.playTone(1000, 200, false);
+  delay(delayBetweenTasks);
+  CircuitPlayground.clearPixels();
+}
+
+bool checkForMotion() {
+  float horizontal = CircuitPlayground.motionX();
+  float vertical = CircuitPlayground.motionY();
+
+  if (abs(horizontal) >= 4.0 || abs(vertical) >= 4.0) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+// Checks to see if the right motion input was made.
+// Should only be called if a motion input was made over the amount to check in
+// either direction.
 // returns true if the right motion input has been made, false if any other
 // are detected.
 bool checkMotionInput(char direction) {
-  
+  float horizontal = CircuitPlayground.motionX();
+  float vertical = CircuitPlayground.motionY();
+
+  bool correctMotion = false;
+
+  switch (direction) {
+    case 'U': // UP
+      (vertical >= 4.0) ? correctMotion = true : correctMotion = false;
+      break;
+
+    case 'L': // LEFT
+      (horizontal <= -4.0) ? correctMotion = true : correctMotion = false;
+      break;
+
+    case 'D': // DOWN
+      (vertical <= -4.0) ? correctMotion = true : correctMotion = false;
+      break;
+
+    case 'R': // RIGHT
+      (horizontal >= 4.0) ? correctMotion = true : correctMotion = false;
+      break;
+  }
 }
 
 // Determines the next challenge for the player.
