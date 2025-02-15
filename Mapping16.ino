@@ -42,12 +42,13 @@ char currentTask = 'U';
 int const delayBetweenTasks = 500;
 bool gameInProgress = false;
 unsigned long timer = 0;
+unsigned long debugTimer = 0;
 
 void setup() {
   // put your setup code here, to run once: 
   CircuitPlayground.begin();
 
-  CircuitPlayground.setAccelRange(LIS3DH_RANGE_8_G); // Sets range to +-4G (4x force of gravity)
+  CircuitPlayground.setAccelRange(LIS3DH_RANGE_4_G); // Sets range to +-4G (4x force of gravity)
   Serial.begin(9600);
   delay(1000);
 }
@@ -57,9 +58,20 @@ void loop() {
   if (CircuitPlayground.leftButton() && gameInProgress == false) {
     currentTask = determineNextTask();
     lightDirection(currentTask);
+    delay(200);
+    gameInProgress == true;
   }
-  
+
+  if (millis() > debugTimer + 500) {
+    Serial.println("gameInProgress: ");
+    Serial.print(gameInProgress);
+    Serial.println();
+    debugTimer = millis();
+  }
+
   if (gameInProgress == true) {
+
+    Serial.println("Game in progress");
     
     bool detectedMotion = checkForMotion();
 
@@ -81,6 +93,8 @@ void loop() {
       failure();
       gameInProgress == false;
     }
+
+    detectedMotion = false;
 
   }
 
@@ -109,6 +123,11 @@ void failure () {
 bool checkForMotion() {
   float horizontal = CircuitPlayground.motionX();
   float vertical = CircuitPlayground.motionY();
+
+  Serial.println("Horizontal is: ");
+  Serial.print(horizontal);
+  Serial.println("Vertical is: ");
+  Serial.print(vertical);
 
   if (abs(horizontal) >= 4.0 || abs(vertical) >= 4.0) {
     return true;
