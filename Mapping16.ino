@@ -54,24 +54,17 @@ void setup() {
 }
 
 void loop() {
-  // Only works if the switch is on
+  // Starts the game when you press the left button.
   if (CircuitPlayground.leftButton() && gameInProgress == false) {
     currentTask = determineNextTask();
     lightDirection(currentTask);
     delay(200);
-    gameInProgress == true;
+    gameInProgress = true;
+    timer = millis();
   }
 
-  if (millis() > debugTimer + 500) {
-    Serial.println("gameInProgress: ");
-    Serial.print(gameInProgress);
-    Serial.println();
-    debugTimer = millis();
-  }
-
-  if (gameInProgress == true) {
-
-    Serial.println("Game in progress");
+  // The rest of the fucking game
+  else if (gameInProgress == true) {
     
     bool detectedMotion = checkForMotion();
 
@@ -85,13 +78,13 @@ void loop() {
         timer = millis();
       } else {
         failure();
-        gameInProgress == false;
+        gameInProgress = false;
       }
     }
 
     if (millis() > timer + timeToReact) {
       failure();
-      gameInProgress == false;
+      gameInProgress = false;
     }
 
     detectedMotion = false;
@@ -120,16 +113,22 @@ void failure () {
   CircuitPlayground.clearPixels();
 }
 
+void printDebug() {
+  if (millis() > debugTimer + 500) {
+    Serial.println("gameInProgress: ");
+    Serial.print(gameInProgress);
+    Serial.println();
+    debugTimer = millis();
+  }
+}
+
 bool checkForMotion() {
   float horizontal = CircuitPlayground.motionX();
   float vertical = CircuitPlayground.motionY();
 
-  Serial.println("Horizontal is: ");
-  Serial.print(horizontal);
-  Serial.println("Vertical is: ");
-  Serial.print(vertical);
+  
 
-  if (abs(horizontal) >= 4.0 || abs(vertical) >= 4.0) {
+  if (abs(horizontal) >= 15.0 || abs(vertical) >= 15.0) {
     return true;
   }
   else {
@@ -146,25 +145,33 @@ bool checkMotionInput(char direction) {
   float horizontal = CircuitPlayground.motionX();
   float vertical = CircuitPlayground.motionY();
 
+  Serial.print("Horizontal is: ");
+  Serial.println(horizontal);
+  Serial.print("Vertical is: ");
+  Serial.println(vertical);
+  Serial.print("");
+
   bool correctMotion = false;
 
   switch (direction) {
     case 'U': // UP
-      (vertical >= 4.0) ? correctMotion = true : correctMotion = false;
+      (vertical >= 15.0) ? correctMotion = true : correctMotion = false;
       break;
 
     case 'L': // LEFT
-      (horizontal <= -4.0) ? correctMotion = true : correctMotion = false;
+      (horizontal <= -15.0) ? correctMotion = true : correctMotion = false;
       break;
 
     case 'D': // DOWN
-      (vertical <= -4.0) ? correctMotion = true : correctMotion = false;
+      (vertical <= -15.0) ? correctMotion = true : correctMotion = false;
       break;
 
     case 'R': // RIGHT
-      (horizontal >= 4.0) ? correctMotion = true : correctMotion = false;
+      (horizontal >= 15.0) ? correctMotion = true : correctMotion = false;
       break;
   }
+
+  return correctMotion;
 }
 
 // Determines the next challenge for the player.
