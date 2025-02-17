@@ -7,21 +7,21 @@ Scaffolding: Mapping - Group 16
 Program by: Luke Whipple and Fabiana Rodriguez Velez
 
 GOAL:
-Bop-It like game where the player must flick the Circuit Playground in different directions,
-cover the device with their hand, or shout into it depending on different Neopixel patterns.
-Upon taking too long or making a mistake, the game will end and your score will be displayed.
+Bop-It like game where the player must shake the Circuit Playground in different directions
+or cover the device with their hand depending on different Neopixel patterns.
+Upon taking too long, the game will end and your score will be displayed.
+Every successful action reduces how long you have to do the next task.
 
 TO PLAY:
 Hold the device with one hand parralel to the ground and press the left button to start the game.
 
 2-3 Neopixels will light in the direction you need to move the sensor,
 so hold it firm when you move your arm in that direction.
-If all the neopixels start flashing, you need to shout into the device.
-If the neopixels start to alternate a dim glow, you need to cover the device with your other hand.
+If the neopixels are all white, you need to cover the device with your other hand.
 
 If you succeeded, a short animation will play along with a possitive beep.
-If you did the wrong action or took too long, 
-the neopixels will flash red with a long buzzer and the game ends. Your score is then displayed.
+If you took too long, the neopixels will flash red with a long buzzer and the game ends. 
+Your score is then displayed.
 
 Your score is based on the number of LEDs that light up, ranging as so:
   0-5: RED
@@ -34,7 +34,7 @@ Your score is based on the number of LEDs that light up, ranging as so:
   36-40: WHITE
   (40 is the highest score)
 
-To play again, just press the left button again. Scores are not tracked.
+To play again, just press the left button again. Scores are not tracked between plays.
 */
 unsigned long timeToReact = 4000;
 unsigned long timer = 0;
@@ -83,20 +83,24 @@ void loop() {
     score = 0;
   }
 
-  // The rest of the fucking game
+  // The actual game
   else if (gameInProgress == true) {
 
+    // Checks the analog input readings each cycle.
     bool detectedMotion = checkForMotion();
-
-    
     int lightReading = analogRead(A8);
+    // MAPPING LIGHT VALUE:
+    // Input: 0 - Highest recorded ambient light value
+    // Output: 0 - 5x an arbitrary value the user needs to reach to count the input as succeeded
     lightReading = map(lightReading, minLightVal, maxLightVal, 0, (targetLightVal * 5));
 
+    // For checking the cover task
     if (currentTask == 'C') {
       if (lightReading < targetLightVal) {
         success();
       }
     }
+    // For checking the motion tasks
     else if (detectedMotion == true) {
       bool correctInput = checkMotionInput(currentTask);
       
@@ -116,79 +120,20 @@ void loop() {
       failure();
     }
 
+    // Resets motion
     detectedMotion = false;
 
   }
 
-  // Updates maximum brightness every second
-  if (millis() % 1000 == 0) {
+  // Updates maximum brightness every .15 seconds (used in mapping)
+  if (millis() % 150 == 0) {
     maxLightVal = updateMaxLightVal();
     delay(1);
   } 
 
 }
 
-void tallyScore() {
-  // RED 0-5
-  for (int i = 0; i < 5; i++) {
-    if (score <= (i + 0)) break;
-    CircuitPlayground.setPixelColor(i+5, 200, 0, 0);
-    delay(80);
-  }
-  // ORANGE 6-10
-  for (int i = 0; i < 5; i++) {
-    if (score <= (i + 5)) break;
-    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
-    CircuitPlayground.setPixelColor(i+5, 200, 100, 0);
-    delay(80);
-  }
-  // YELLOW 11-15
-  for (int i = 0; i < 5; i++) {
-    if (score <= (i + 10)) break;
-    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
-    CircuitPlayground.setPixelColor(i+5, 200, 200, 0);
-    delay(80);
-  }
-  // GREEN 16-20
-  for (int i = 0; i < 5; i++) {
-    if (score <= (i + 15)) break;
-    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
-    CircuitPlayground.setPixelColor(i+5, 0, 200, 0);
-    delay(80);
-  }
-  // BLUE 21-25
-  for (int i = 0; i < 5; i++) {
-    if (score <= (i + 20)) break;
-    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
-    CircuitPlayground.setPixelColor(i+5, 0, 0, 200);
-    delay(80);
-  }
-  // INDIGO 26-30
-  for (int i = 0; i < 5; i++) {
-    if (score <= (i + 25)) break;
-    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
-    CircuitPlayground.setPixelColor(i+5, 0 , 200, 210);
-    delay(80);
-  }
-  // VIOLET 31-35
-  for (int i = 0; i < 5; i++) {
-    if (score <= (i + 30)) break;
-    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
-    CircuitPlayground.setPixelColor(i+5, 100, 0, 200);
-    delay(80);
-  }
-  // WHITE 36-40
-  for (int i = 0; i < 5; i++) {
-    if (score <= (i + 35)) break;
-    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
-    CircuitPlayground.setPixelColor(i+5, 200, 200, 200);
-    delay(80);
-  }
-
-  delay(3000);
-  CircuitPlayground.clearPixels();
-}
-
+// Increases maxLightVal if a larger light value has been detected
 int updateMaxLightVal() {
   if (analogRead(A8) > maxLightVal) {
     return analogRead(A8);
@@ -216,8 +161,7 @@ void success () {
   timeToReact -= 90;
 }
 
-// Plays a short tone and then delays the program so the user has time
-// to reposition the device.
+// Flashes red and buzzes to let the player know they lost then displays their score.
 void failure () {
   for (int i = 0; i < 10; i++) {CircuitPlayground.setPixelColor(i, 255, 0, 0);}
 
@@ -232,6 +176,7 @@ void failure () {
   gameInProgress = false;
 }
 
+// Debug that prints every so many milliseconds (UNUSED)
 void printDebug() {
   if (millis() > debugTimer + 500) {
     Serial.println("gameInProgress: ");
@@ -241,6 +186,8 @@ void printDebug() {
   }
 }
 
+// Checks to see if enough acceleration has been recorded 
+// to count as an input.
 bool checkForMotion() {
   float horizontal = CircuitPlayground.motionX();
   float vertical = CircuitPlayground.motionY();
@@ -256,28 +203,27 @@ bool checkForMotion() {
 // Checks to see if the right motion input was made.
 // Should only be called if a motion input was made over the amount to check in
 // either direction.
-// returns true if the right motion input has been made, false if any other
-// are detected.
+// returns true if the right motion input has been made, false if wrong.
 bool checkMotionInput(char direction) {
 
   float horizontal = 0;
   float vertical = 0;
 
   // Slightly smooths out motion to prevent misinputs
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 10; i++) {
     horizontal += CircuitPlayground.motionX();
     vertical += CircuitPlayground.motionY();
-    delay(1);
   }
-  horizontal = horizontal / 3;
-  vertical = vertical / 3;
+  horizontal = horizontal / 10;
+  vertical = vertical / 10;
 
-  Serial.print("Horizontal is: ");
-  Serial.println(horizontal);
-  Serial.print("Vertical is: ");
-  Serial.println(vertical);
-  Serial.print("Direction is: ");
-  Serial.println(direction);
+  // Serial.print("Horizontal is: ");
+  // Serial.println(horizontal);
+  // Serial.print("Vertical is: ");
+  // Serial.println(vertical);
+  // Serial.print("Direction is: ");
+  // Serial.println(direction);
+
   bool correctMotion = false;
 
   switch (direction) {
@@ -366,3 +312,65 @@ void lightDirection(char direction) {
       
   }
 } 
+
+// Displays your final score based on colored tallies.
+void tallyScore() {
+  // RED 0-5
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 0)) break;
+    CircuitPlayground.setPixelColor(i+5, 200, 0, 0);
+    delay(80);
+  }
+  // ORANGE 6-10
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 5)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 200, 100, 0);
+    delay(80);
+  }
+  // YELLOW 11-15
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 10)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 200, 200, 0);
+    delay(80);
+  }
+  // GREEN 16-20
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 15)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 0, 200, 0);
+    delay(80);
+  }
+  // BLUE 21-25
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 20)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 200);
+    delay(80);
+  }
+  // INDIGO 26-30
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 25)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 0 , 200, 210);
+    delay(80);
+  }
+  // VIOLET 31-35
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 30)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 100, 0, 200);
+    delay(80);
+  }
+  // WHITE 36-40
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 35)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 200, 200, 200);
+    delay(80);
+  }
+
+  delay(3000);
+  CircuitPlayground.clearPixels();
+}
