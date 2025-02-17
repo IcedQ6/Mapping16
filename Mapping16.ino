@@ -32,75 +32,188 @@ Your score is based on the number of LEDs that light up, ranging as so:
   26-30: INDIGO
   31-35: VIOLET
   36-40: WHITE
-  41-45: RAINBOW
-  (45 is the highest score)
+  (40 is the highest score)
 
 To play again, just press the left button again. Scores are not tracked.
 */
-int timeToReact = 4000;
-char currentTask = 'U';
-int const delayBetweenTasks = 500;
-bool gameInProgress = false;
+unsigned long timeToReact = 4000;
 unsigned long timer = 0;
 unsigned long debugTimer = 0;
+
+char currentTask = 'U';
+int const delayBetweenTasks = 500;
+int score = 0;
+
+bool gameInProgress = false;
+
+// For mapping light value depending on ambient light
+int minLightVal = 0;
+int maxLightVal = 30; // lowest starting value
+int targetLightVal = 20;
+// P.S. The accelerometers are already mapped to easy to understand values so I didn't need to
+// map them.
 
 void setup() {
   // put your setup code here, to run once: 
   CircuitPlayground.begin();
 
   CircuitPlayground.setAccelRange(LIS3DH_RANGE_4_G); // Sets range to +-4G (4x force of gravity)
+
+  pinMode(A8, INPUT);
+
   Serial.begin(9600);
   delay(1000);
 }
 
 void loop() {
+  
   // Starts the game when you press the left button.
   if (CircuitPlayground.leftButton() && gameInProgress == false) {
+    // Sets up first task
     currentTask = determineNextTask();
     lightDirection(currentTask);
+
+    //Debounce
     delay(200);
+
+    // Resets variables
     gameInProgress = true;
     timer = millis();
+    timeToReact = 4000;
+    score = 0;
   }
 
   // The rest of the fucking game
   else if (gameInProgress == true) {
-    
+
     bool detectedMotion = checkForMotion();
 
-    if (detectedMotion == true) {
+    
+    int lightReading = analogRead(A8);
+    lightReading = map(lightReading, minLightVal, maxLightVal, 0, (targetLightVal * 5));
+
+    if (currentTask == 'C') {
+      if (lightReading < targetLightVal) {
+        success();
+      }
+    }
+    else if (detectedMotion == true) {
       bool correctInput = checkMotionInput(currentTask);
       
       if (correctInput == true) {
         success();
-        currentTask = determineNextTask();
-        lightDirection(currentTask);
-        timer = millis();
-      } else {
+
+      } /* else { 
         failure();
         gameInProgress = false;
-      }
+      } */
+      // I cut out this failure state for doing the wrong input since sometimes 
+      // the accelerometer would read the wrong direction for seemingly no reason.
     }
 
+    // If the player takes too long, they lose.
     if (millis() > timer + timeToReact) {
       failure();
-      gameInProgress = false;
     }
 
     detectedMotion = false;
 
   }
 
+  // Updates maximum brightness every second
+  if (millis() % 1000 == 0) {
+    maxLightVal = updateMaxLightVal();
+    delay(1);
+  } 
+
+}
+
+void tallyScore() {
+  // RED 0-5
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 0)) break;
+    CircuitPlayground.setPixelColor(i+5, 200, 0, 0);
+    delay(80);
+  }
+  // ORANGE 6-10
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 5)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 200, 100, 0);
+    delay(80);
+  }
+  // YELLOW 11-15
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 10)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 200, 200, 0);
+    delay(80);
+  }
+  // GREEN 16-20
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 15)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 0, 200, 0);
+    delay(80);
+  }
+  // BLUE 21-25
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 20)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 200);
+    delay(80);
+  }
+  // INDIGO 26-30
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 25)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 0 , 200, 210);
+    delay(80);
+  }
+  // VIOLET 31-35
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 30)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 100, 0, 200);
+    delay(80);
+  }
+  // WHITE 36-40
+  for (int i = 0; i < 5; i++) {
+    if (score <= (i + 35)) break;
+    CircuitPlayground.setPixelColor(i+5, 0, 0, 0);
+    CircuitPlayground.setPixelColor(i+5, 200, 200, 200);
+    delay(80);
+  }
+
+  delay(3000);
+  CircuitPlayground.clearPixels();
+}
+
+int updateMaxLightVal() {
+  if (analogRead(A8) > maxLightVal) {
+    return analogRead(A8);
+  } else {
+    return maxLightVal;
+  }
 }
 
 // Plays a short tone and then delays the program so the user has time
 // to reposition the device.
 void success () {
   for (int i = 0; i < 10; i++) {CircuitPlayground.setPixelColor(i, 0, 255, 0);}
-
   CircuitPlayground.playTone(5000, 200, false);
   delay(delayBetweenTasks);
+
   CircuitPlayground.clearPixels();
+
+  // Increases score and sets up next task.
+  score++;
+  currentTask = determineNextTask();
+  lightDirection(currentTask);
+
+  // Resets timer and shortens time available to react to the next task.
+  timer = millis();
+  timeToReact -= 90;
 }
 
 // Plays a short tone and then delays the program so the user has time
@@ -111,6 +224,12 @@ void failure () {
   CircuitPlayground.playTone(1000, 200, false);
   delay(delayBetweenTasks);
   CircuitPlayground.clearPixels();
+
+  delay(delayBetweenTasks);
+
+  tallyScore();
+
+  gameInProgress = false;
 }
 
 void printDebug() {
@@ -126,8 +245,6 @@ bool checkForMotion() {
   float horizontal = CircuitPlayground.motionX();
   float vertical = CircuitPlayground.motionY();
 
-  
-
   if (abs(horizontal) >= 15.0 || abs(vertical) >= 15.0) {
     return true;
   }
@@ -142,32 +259,42 @@ bool checkForMotion() {
 // returns true if the right motion input has been made, false if any other
 // are detected.
 bool checkMotionInput(char direction) {
-  float horizontal = CircuitPlayground.motionX();
-  float vertical = CircuitPlayground.motionY();
+
+  float horizontal = 0;
+  float vertical = 0;
+
+  // Slightly smooths out motion to prevent misinputs
+  for (int i = 0; i < 3; i++) {
+    horizontal += CircuitPlayground.motionX();
+    vertical += CircuitPlayground.motionY();
+    delay(1);
+  }
+  horizontal = horizontal / 3;
+  vertical = vertical / 3;
 
   Serial.print("Horizontal is: ");
   Serial.println(horizontal);
   Serial.print("Vertical is: ");
   Serial.println(vertical);
-  Serial.print("");
-
+  Serial.print("Direction is: ");
+  Serial.println(direction);
   bool correctMotion = false;
 
   switch (direction) {
     case 'U': // UP
-      (vertical >= 15.0) ? correctMotion = true : correctMotion = false;
+      (vertical >= 0) ? correctMotion = true : correctMotion = false;
       break;
 
     case 'L': // LEFT
-      (horizontal <= -15.0) ? correctMotion = true : correctMotion = false;
+      (horizontal <= 0) ? correctMotion = true : correctMotion = false;
       break;
 
     case 'D': // DOWN
-      (vertical <= -15.0) ? correctMotion = true : correctMotion = false;
+      (vertical <= 0) ? correctMotion = true : correctMotion = false;
       break;
 
     case 'R': // RIGHT
-      (horizontal >= 15.0) ? correctMotion = true : correctMotion = false;
+      (horizontal >= 0) ? correctMotion = true : correctMotion = false;
       break;
   }
 
@@ -177,7 +304,7 @@ bool checkMotionInput(char direction) {
 // Determines the next challenge for the player.
 // Returns a character corresponding to the 6 tasks
 char determineNextTask() {
-  long randomNum = random(4);
+  long randomNum = random(0, 5);
 
   // Converts int to corresponding character
   // 0-3 are up, left, down, and right
@@ -188,8 +315,7 @@ char determineNextTask() {
     case 1: return 'L';
     case 2: return 'D';
     case 3: return 'R';
-    case 4: return 'Y'; //yell
-    case 5: return 'C'; //cover
+    case 4: return 'C';
   }
 }
 
@@ -220,6 +346,13 @@ void lightDirection(char direction) {
         CircuitPlayground.setPixelColor(i, 0, 0, 255);
       }
       break;
+
+    case 'C': // COVER
+      for (int i = 0; i <  10; i++) {
+        CircuitPlayground.setPixelColor(i, 100, 100, 100);
+      }
+      break;
+
 
     default: // Flashes an error animation.
       for (int j = 0; j < 8; j++) {
